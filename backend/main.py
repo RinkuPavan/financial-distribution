@@ -4,7 +4,6 @@ from pydantic import ValidationError
 from datetime import datetime
 import calendar
 import xml.etree.ElementTree as ET
-from xml.dom import minidom
 from services.distribution import generate_transaction_schedule
 from schemas import DistributionRequest, DistributionResponse
 from tally_schemas import TallyDistributionResponse, TallyTransactionEntry
@@ -12,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Financial Distribution Engine")
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,20 +40,41 @@ async def generate_plan(request: DistributionRequest):
 @app.post("/generate-plan-tally-xml")
 async def generate_plan_tally_xml(request: Request):
     """
-    Endpoint for Tally Prime TDL HTTP Post action.
-    Tally sends XML wrapped in <ENVELOPE><REQUEST>...</REQUEST></ENVELOPE>
-    Returns XML with <STATUS>1</STATUS> for success, <STATUS>0</STATUS> for failure.
+    Endpoint for Tally Prime TDL Collection with RemoteURL + RemoteRequest.
+
+    Tally sends:
+        <ENVELOPE>
+          <REQUEST>
+            <total_amount>100000</total_amount>
+            <months>12</months>
+            <financial_year_start>April</financial_year_start>
+          </REQUEST>
+        </ENVELOPE>
+
+    CRITICAL — Response must be EXACTLY this structure:
+        <RESPONSE>
+          <STATUS>1</STATUS>
+          <ITEM><MONTH>April 2025</MONTH><DATE>01-04-2025</DATE><AMOUNT>8333.33</AMOUNT></ITEM>
+          <ITEM>...</ITEM>
+        </RESPONSE>
+
+    Rules:
+      - Root tag must be RESPONSE
+      - ITEM must be DIRECT children of RESPONSE (NOT nested under DATA or any wrapper)
+      - NO XML declaration line (no <?xml version...?>)
+      - NO pretty printing / indentation (Tally parser is strict)
+      - media_type must be text/xml
     """
     try:
-        # Read raw XML body from Tally
         body = await request.body()
-        body_str = body.decode("utf-8", errors="ignore")
-        print(f"[Tally XML] Received body: {body_str}")
+        body_str = body.decode("utf-8", errors="ignore").strip()
+        print(f"[Tally XML] Received body:\n{body_str}")
 
-        # Parse XML sent by Tally
+        if not body_str:
+            raise ValueError("Empty request body received from Tally")
+
         root = ET.fromstring(body_str)
 
-        # Search for fields at any depth (Tally wraps in ENVELOPE)
         def find_text(tag):
             el = root.find(f".//{tag}")
             return el.text.strip() if el is not None and el.text else None
@@ -67,43 +86,41 @@ async def generate_plan_tally_xml(request: Request):
         print(f"[Tally XML] Parsed: amount={total_amount_str}, months={months_str}, fy={financial_year_start}")
 
         if not total_amount_str or not months_str or not financial_year_start:
-            raise ValueError(f"Missing required fields. Received XML: {body_str}")
+            raise ValueError(f"Missing required fields in XML. Got: {body_str}")
 
         total_amount = float(total_amount_str)
         months       = int(months_str)
 
-        # Call existing distribution service
         result = generate_transaction_schedule(
             total_amount=total_amount,
             months=months,
             financial_year_start=financial_year_start
         )
 
-        # Build Tally-compatible XML response
-        # STATUS=1 → Tally shows Success Report
-        # STATUS=0 → Tally shows Error Report
+        # ── Build response XML ───────────────────────────────
+        # CRITICAL: ITEM must be direct children of RESPONSE.
+        # TDL Collection uses XMLObjectPath: ITEM : 1 : RESPONSE
+        # DO NOT wrap items in <DATA> or any other tag.
         resp_root = ET.Element("RESPONSE")
-        ET.SubElement(resp_root, "STATUS").text  = "1"
-        ET.SubElement(resp_root, "MESSAGE").text = "Distribution plan generated successfully"
+        ET.SubElement(resp_root, "STATUS").text = "1"
 
-        data_el = ET.SubElement(resp_root, "DATA")
         for month_block in result["monthly_distribution"]:
             for entry in month_block["entries"]:
-                item = ET.SubElement(data_el, "ITEM")
-                ET.SubElement(item, "MONTH").text  = month_block["month"]
-                ET.SubElement(item, "DATE").text   = entry["date"]
-                ET.SubElement(item, "AMOUNT").text = str(entry["amount"])
+                item = ET.SubElement(resp_root, "ITEM")
+                ET.SubElement(item, "MONTH").text  = str(month_block["month"])
+                ET.SubElement(item, "DATE").text   = str(entry["date"])
+                ET.SubElement(item, "AMOUNT").text = str(round(entry["amount"], 2))
 
-        rough  = ET.tostring(resp_root, encoding="unicode")
-        pretty = minidom.parseString(rough).toprettyxml(indent="  ")
+        # NO pretty printing. NO xml declaration. Plain flat string.
+        xml_str = ET.tostring(resp_root, encoding="unicode", xml_declaration=False)
+        print(f"[Tally XML] Sending response:\n{xml_str}")
 
-        print(f"[Tally XML] Responding with STATUS=1, items generated successfully")
-        return Response(content=pretty, media_type="application/xml")
+        return Response(content=xml_str, media_type="text/xml")
 
     except Exception as e:
         print(f"[Tally XML] Error: {str(e)}")
         err_xml = f"<RESPONSE><STATUS>0</STATUS><MESSAGE>{str(e)}</MESSAGE></RESPONSE>"
-        return Response(content=err_xml, media_type="application/xml", status_code=200)
+        return Response(content=err_xml, media_type="text/xml", status_code=200)
 
 
 @app.get("/health")

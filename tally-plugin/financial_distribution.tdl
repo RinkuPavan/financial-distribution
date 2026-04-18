@@ -1,97 +1,29 @@
 ; ============================================================
 ; Financial Distribution Plugin for Tally Prime 7.0
-; Uses HTTP Post action with correct XML format
-; Server: run_server.exe on port 48765
+;
+; HOW IT WORKS (Official Tally documented method):
+;   1. User fills Amount, Months, FY Start and presses F5
+;   2. Function triggers Walk on FDIST.PostCollection
+;   3. Collection fires HTTP POST to FastAPI with request XML
+;   4. FastAPI returns <RESPONSE><ITEM>...</ITEM></RESPONSE>
+;   5. TDL parses each <ITEM> into collection objects
+;   6. Result report repeats over collection showing the table
+;
+; REQUIREMENTS:
+;   - Tally Server Config (F1 > Help > Server):
+;       Tally Prime act as : Both Server and Client
+;       Port               : 1212
+;   - FastAPI .exe running on http://localhost:48765
 ; ============================================================
-
-;; URL must be defined here under System Formula
-[System: Formula]
-    FDIST.URL : "http://localhost:48765/generate-plan-tally-xml"
 
 ;; ── Menu entry ──────────────────────────────────────────────
 [#Menu: Gateway of Tally]
-    Add : Item : Financial Distribution : Alter : FDIST.Report
+    Add : Item : Financial Distribution : Alter : FDIST.Form.Report
 
-;; ── Report ──────────────────────────────────────────────────
-[Report: FDIST.Report]
-    Form  : FDIST.Form
-    Title : "Financial Distribution Plan"
+;; ============================================================
+;; VARIABLES
+;; ============================================================
 
-;; ── Form ────────────────────────────────────────────────────
-[Form: FDIST.Form]
-    Parts       : FDIST.Part
-    Buttons     : FDIST.BtnGenerate, FDIST.BtnClose
-    Width       : 60% Page
-    Height      : 50% Page
-
-;; ── Part → Lines ────────────────────────────────────────────
-[Part: FDIST.Part]
-    Lines : FDIST.LineTitle, FDIST.LineBlank, FDIST.LineAmount, FDIST.LineMonths, FDIST.LineFYStart
-
-[Line: FDIST.LineTitle]
-    Fields : FDIST.FTitle
-
-[Line: FDIST.LineBlank]
-    Fields : FDIST.FBlank
-
-[Line: FDIST.LineAmount]
-    Fields : FDIST.FLblAmount, FDIST.FAmount
-
-[Line: FDIST.LineMonths]
-    Fields : FDIST.FLblMonths, FDIST.FMonths
-
-[Line: FDIST.LineFYStart]
-    Fields : FDIST.FLblFYStart, FDIST.FFYStart
-
-;; ── Label fields (read only) ────────────────────────────────
-[Field: FDIST.FTitle]
-    Use    : Name Field
-    Set as : "== FINANCIAL DISTRIBUTION PLAN =="
-    Skip   : Yes
-    Width  : 60% Screen
-    Style  : Bold
-
-[Field: FDIST.FBlank]
-    Use    : Name Field
-    Set as : " "
-    Skip   : Yes
-    Width  : 60% Screen
-
-[Field: FDIST.FLblAmount]
-    Use    : Name Field
-    Set as : "Total Amount (Rs.)  :"
-    Skip   : Yes
-    Width  : 25% Screen
-
-[Field: FDIST.FLblMonths]
-    Use    : Name Field
-    Set as : "Number of Months    :"
-    Skip   : Yes
-    Width  : 25% Screen
-
-[Field: FDIST.FLblFYStart]
-    Use    : Name Field
-    Set as : "FY Start Month      :"
-    Skip   : Yes
-    Width  : 25% Screen
-
-;; ── Input fields ────────────────────────────────────────────
-[Field: FDIST.FAmount]
-    Use      : Number Field
-    Variable : FDIST.VAmount
-    Width    : 20% Screen
-
-[Field: FDIST.FMonths]
-    Use      : Number Field
-    Variable : FDIST.VMonths
-    Width    : 20% Screen
-
-[Field: FDIST.FFYStart]
-    Use      : Short Name Field
-    Variable : FDIST.VFYStart
-    Width    : 20% Screen
-
-;; ── Variables with defaults ──────────────────────────────────
 [Variable: FDIST.VAmount]
     Type    : Number
     Default : 100000
@@ -104,99 +36,296 @@
     Type    : String
     Default : "April"
 
+[Variable: FDIST.VStatus]
+    Type    : String
+    Default : "Enter values and press F5 to Generate Plan"
+
+;; ============================================================
+;; INPUT FORM
+;; ============================================================
+
+[Report: FDIST.Form.Report]
+    Form  : FDIST.Form
+    Title : "Financial Distribution Plan"
+
+[Form: FDIST.Form]
+    Parts   : FDIST.Form.Part
+    Buttons : FDIST.Btn.Generate, FDIST.Btn.Close
+    Width   : 60% Page
+    Height  : 55% Page
+
+[Part: FDIST.Form.Part]
+    Lines : FDIST.Line.Title, FDIST.Line.Blank, FDIST.Line.Amount, FDIST.Line.Months, FDIST.Line.FYStart, FDIST.Line.Blank2, FDIST.Line.Status
+
+[Line: FDIST.Line.Title]
+    Fields : FDIST.Field.Title
+
+[Line: FDIST.Line.Blank]
+    Fields : FDIST.Field.Blank
+
+[Line: FDIST.Line.Blank2]
+    Fields : FDIST.Field.Blank2
+
+[Line: FDIST.Line.Amount]
+    Fields : FDIST.Field.LblAmount, FDIST.Field.Amount
+
+[Line: FDIST.Line.Months]
+    Fields : FDIST.Field.LblMonths, FDIST.Field.Months
+
+[Line: FDIST.Line.FYStart]
+    Fields : FDIST.Field.LblFYStart, FDIST.Field.FYStart
+
+[Line: FDIST.Line.Status]
+    Fields : FDIST.Field.Status
+
+[Field: FDIST.Field.Title]
+    Use    : Name Field
+    Set as : "== FINANCIAL DISTRIBUTION PLAN =="
+    Skip   : Yes
+    Width  : 60% Screen
+    Style  : Bold
+
+[Field: FDIST.Field.Blank]
+    Use    : Name Field
+    Set as : " "
+    Skip   : Yes
+    Width  : 60% Screen
+
+[Field: FDIST.Field.Blank2]
+    Use    : Name Field
+    Set as : " "
+    Skip   : Yes
+    Width  : 60% Screen
+
+[Field: FDIST.Field.LblAmount]
+    Use    : Name Field
+    Set as : "Total Amount (Rs.)  :"
+    Skip   : Yes
+    Width  : 25% Screen
+
+[Field: FDIST.Field.LblMonths]
+    Use    : Name Field
+    Set as : "Number of Months    :"
+    Skip   : Yes
+    Width  : 25% Screen
+
+[Field: FDIST.Field.LblFYStart]
+    Use    : Name Field
+    Set as : "FY Start Month      :"
+    Skip   : Yes
+    Width  : 25% Screen
+
+[Field: FDIST.Field.Status]
+    Use    : Name Field
+    Set as : ##FDIST.VStatus
+    Skip   : Yes
+    Width  : 60% Screen
+
+[Field: FDIST.Field.Amount]
+    Use      : Number Field
+    Variable : FDIST.VAmount
+    Width    : 20% Screen
+
+[Field: FDIST.Field.Months]
+    Use      : Number Field
+    Variable : FDIST.VMonths
+    Width    : 20% Screen
+
+[Field: FDIST.Field.FYStart]
+    Use      : Name Field
+    Variable : FDIST.VFYStart
+    Width    : 20% Screen
+
 ;; ── Buttons ─────────────────────────────────────────────────
-[Button: FDIST.BtnGenerate]
+[Button: FDIST.Btn.Generate]
     Key         : F5
     Title       : "F5: Generate Plan"
-    Action      : HTTP Post : @@FDIST.URL : ASCII : FDIST.ReqReport : FDIST.ErrReport : FDIST.OkReport
+    Action      : Call : FDIST.Fn.Generate
     Always Show : Yes
 
-[Button: FDIST.BtnClose]
+[Button: FDIST.Btn.Close]
     Key         : Escape
     Title       : "Esc: Close"
     Action      : Close Form
     Always Show : Yes
 
-;; ── Request Report - XML body sent to FastAPI ────────────────
-;; Tally wraps this in <ENVELOPE> automatically
-[Report: FDIST.ReqReport]
-    Form : FDIST.ReqForm
+;; ============================================================
+;; FUNCTION
+;; Walk Collection fires the HTTP POST via RemoteURL.
+;; After walk, if items exist, open the result report.
+;; ============================================================
 
-[Form: FDIST.ReqForm]
-    Parts : FDIST.ReqPart
+[Function: FDIST.Fn.Generate]
+    00 : SET             : FDIST.VStatus : "Contacting server, please wait..."
+    10 : Walk Collection : FDIST.PostCollection
+    20 : End Walk
+    30 : IF              : $$CollectionFieldCount:FDIST.PostCollection > 0
+    40 :     SET         : FDIST.VStatus : "Done! Showing results..."
+    50 :     Display     : FDIST.Result.Report
+    60 : ELSE
+    70 :     SET         : FDIST.VStatus : "ERROR: No data returned. Check server on port 48765."
+    80 : END IF
+    90 : RETURN
 
-[Part: FDIST.ReqPart]
-    Lines   : FDIST.ReqLine
+;; ============================================================
+;; COLLECTION — fires HTTP POST via RemoteURL + RemoteRequest
+;;
+;; RemoteURL    : URL to POST to
+;; RemoteRequest: TDL Report that generates the XML request body
+;;                Tally auto-wraps it in <ENVELOPE>
+;; XMLObjectPath: ITEM:1:RESPONSE means — inside root <RESPONSE>,
+;;                find <ITEM> nodes starting at position 1
+;; XMLObject    : maps each <ITEM> to FDIST.Item.Object fields
+;; ============================================================
+
+[Collection: FDIST.PostCollection]
+    Remote URL      : "http://localhost:48765/generate-plan-tally-xml"
+    RemoteRequest   : FDIST.Req.Report : ASCII
+    XML Object Path : ITEM : 1 : RESPONSE
+    XML Object      : FDIST.Item.Object
+
+[Object: FDIST.Item.Object]
+    Storage : MONTH  : String
+    Storage : DATE   : String
+    Storage : AMOUNT : String
+
+;; ============================================================
+;; REQUEST REPORT — generates XML body sent to FastAPI
+;;
+;; Tally auto-adds <ENVELOPE> wrapper, so FastAPI receives:
+;; <ENVELOPE>
+;;   <REQUEST>
+;;     <total_amount>100000</total_amount>
+;;     <months>12</months>
+;;     <financial_year_start>April</financial_year_start>
+;;   </REQUEST>
+;; </ENVELOPE>
+;; ============================================================
+
+[Report: FDIST.Req.Report]
+    Form : FDIST.Req.Form
+
+[Form: FDIST.Req.Form]
+    Parts : FDIST.Req.Part
+
+[Part: FDIST.Req.Part]
+    Lines   : FDIST.Req.Line
     XML Tag : "REQUEST"
 
-[Line: FDIST.ReqLine]
-    Fields : FDIST.FReqAmount, FDIST.FReqMonths, FDIST.FReqFYStart
+[Line: FDIST.Req.Line]
+    Fields : FDIST.Req.FAmount, FDIST.Req.FMonths, FDIST.Req.FFYStart
 
-[Field: FDIST.FReqAmount]
-    Set as  : ##FDIST.VAmount
+[Field: FDIST.Req.FAmount]
+    Set as  : STRING(##FDIST.VAmount)
     XML Tag : "total_amount"
 
-[Field: FDIST.FReqMonths]
-    Set as  : ##FDIST.VMonths
+[Field: FDIST.Req.FMonths]
+    Set as  : STRING(##FDIST.VMonths)
     XML Tag : "months"
 
-[Field: FDIST.FReqFYStart]
+[Field: FDIST.Req.FFYStart]
     Set as  : ##FDIST.VFYStart
     XML Tag : "financial_year_start"
 
-;; ── Success Report ───────────────────────────────────────────
-[Report: FDIST.OkReport]
-    Form  : FDIST.OkForm
-    Title : "Success"
+;; ============================================================
+;; RESULT REPORT — displays parsed collection as a table
+;; Each row = one ITEM from the FastAPI XML response
+;; ============================================================
 
-[Form: FDIST.OkForm]
-    Parts   : FDIST.OkPart
-    Buttons : FDIST.BtnOkClose
-    Width   : 50% Page
-    Height  : 20% Page
+[Report: FDIST.Result.Report]
+    Form  : FDIST.Result.Form
+    Title : "Distribution Plan"
 
-[Part: FDIST.OkPart]
-    Lines : FDIST.OkLine
+[Form: FDIST.Result.Form]
+    Parts   : FDIST.Result.HeadPart, FDIST.Result.DataPart
+    Buttons : FDIST.Btn.ResultClose
+    Width   : 80% Page
+    Height  : 80% Page
 
-[Line: FDIST.OkLine]
-    Fields : FDIST.FOkMsg
+[Part: FDIST.Result.HeadPart]
+    Lines : FDIST.Result.TitleLine, FDIST.Result.BlankLine, FDIST.Result.HeaderLine, FDIST.Result.SepLine
 
-[Field: FDIST.FOkMsg]
+[Part: FDIST.Result.DataPart]
+    Lines    : FDIST.Result.DataLine
+    Repeat   : FDIST.Result.DataLine : FDIST.PostCollection
+    Scrolled : Vertical
+
+[Line: FDIST.Result.TitleLine]
+    Fields : FDIST.Result.TitleField
+
+[Line: FDIST.Result.BlankLine]
+    Fields : FDIST.Result.BlankField
+
+[Line: FDIST.Result.HeaderLine]
+    Fields : FDIST.Result.HdrMonth, FDIST.Result.HdrDate, FDIST.Result.HdrAmount
+
+[Line: FDIST.Result.SepLine]
+    Fields : FDIST.Result.SepField
+
+[Line: FDIST.Result.DataLine]
+    Fields : FDIST.Result.FldMonth, FDIST.Result.FldDate, FDIST.Result.FldAmount
+
+;; Header fields
+[Field: FDIST.Result.TitleField]
     Use    : Name Field
-    Set as : "Distribution plan generated successfully!"
+    Set as : "FINANCIAL DISTRIBUTION PLAN"
     Skip   : Yes
-    Width  : 70% Screen
+    Width  : 80% Screen
+    Style  : Bold
 
-[Button: FDIST.BtnOkClose]
-    Key         : Escape
-    Title       : "Esc: Close"
-    Action      : Close Form
-    Always Show : Yes
-
-;; ── Error Report ─────────────────────────────────────────────
-[Report: FDIST.ErrReport]
-    Form  : FDIST.ErrForm
-    Title : "Error"
-
-[Form: FDIST.ErrForm]
-    Parts   : FDIST.ErrPart
-    Buttons : FDIST.BtnErrClose
-    Width   : 50% Page
-    Height  : 20% Page
-
-[Part: FDIST.ErrPart]
-    Lines : FDIST.ErrLine
-
-[Line: FDIST.ErrLine]
-    Fields : FDIST.FErrMsg
-
-[Field: FDIST.FErrMsg]
+[Field: FDIST.Result.BlankField]
     Use    : Name Field
-    Set as : "Connection failed. Please ensure run_server.exe is running on port 48765."
+    Set as : " "
     Skip   : Yes
-    Width  : 70% Screen
+    Width  : 80% Screen
 
-[Button: FDIST.BtnErrClose]
+[Field: FDIST.Result.SepField]
+    Use    : Name Field
+    Set as : "------------------------------------------------------------"
+    Skip   : Yes
+    Width  : 80% Screen
+
+[Field: FDIST.Result.HdrMonth]
+    Use    : Name Field
+    Set as : "Month"
+    Skip   : Yes
+    Width  : 20% Screen
+    Style  : Bold
+
+[Field: FDIST.Result.HdrDate]
+    Use    : Name Field
+    Set as : "Date"
+    Skip   : Yes
+    Width  : 30% Screen
+    Style  : Bold
+
+[Field: FDIST.Result.HdrAmount]
+    Use    : Name Field
+    Set as : "Amount (Rs.)"
+    Skip   : Yes
+    Width  : 25% Screen
+    Style  : Bold
+
+;; Data fields — $MONTH/$DATE/$AMOUNT map to XMLObject Storage names
+[Field: FDIST.Result.FldMonth]
+    Use    : Name Field
+    Set as : $MONTH
+    Skip   : Yes
+    Width  : 20% Screen
+
+[Field: FDIST.Result.FldDate]
+    Use    : Name Field
+    Set as : $DATE
+    Skip   : Yes
+    Width  : 30% Screen
+
+[Field: FDIST.Result.FldAmount]
+    Use    : Name Field
+    Set as : $AMOUNT
+    Skip   : Yes
+    Width  : 25% Screen
+
+[Button: FDIST.Btn.ResultClose]
     Key         : Escape
     Title       : "Esc: Close"
     Action      : Close Form
