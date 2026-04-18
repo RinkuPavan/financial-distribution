@@ -1,4 +1,4 @@
-('c:\\AI_Environment\\Projects\\Financial calc for '
+('C:\\AI_Environment\\Projects\\Financial calc for '
  'tally\\financial-distribution\\build\\run_server\\PYZ-00.pyz',
  [('__future__',
    'C:\\AI_Environment\\Python313\\Lib\\__future__.py',
@@ -833,7 +833,7 @@
    'PYMODULE'),
   ('lzma', 'C:\\AI_Environment\\Python313\\Lib\\lzma.py', 'PYMODULE'),
   ('main',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\main.py',
    'PYMODULE'),
   ('mimetypes', 'C:\\AI_Environment\\Python313\\Lib\\mimetypes.py', 'PYMODULE'),
@@ -1312,17 +1312,17 @@
    'PYMODULE'),
   ('runpy', 'C:\\AI_Environment\\Python313\\Lib\\runpy.py', 'PYMODULE'),
   ('schemas',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\schemas.py',
    'PYMODULE'),
   ('secrets', 'C:\\AI_Environment\\Python313\\Lib\\secrets.py', 'PYMODULE'),
   ('selectors', 'C:\\AI_Environment\\Python313\\Lib\\selectors.py', 'PYMODULE'),
   ('services',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\services\\__init__.py',
    'PYMODULE'),
   ('services.distribution',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\services\\distribution.py',
    'PYMODULE'),
   ('setuptools',
@@ -1821,7 +1821,7 @@
    'C:\\AI_Environment\\Python313\\Lib\\sysconfig\\__init__.py',
    'PYMODULE'),
   ('tally_schemas',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\tally_schemas.py',
    'PYMODULE'),
   ('tarfile', 'C:\\AI_Environment\\Python313\\Lib\\tarfile.py', 'PYMODULE'),
@@ -1977,15 +1977,15 @@
    'C:\\AI_Environment\\Python313\\Lib\\urllib\\response.py',
    'PYMODULE'),
   ('utils',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\utils\\__init__.py',
    'PYMODULE'),
   ('utils.amount_utils',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\utils\\amount_utils.py',
    'PYMODULE'),
   ('utils.date_utils',
-   'c:\\AI_Environment\\Projects\\Financial calc for '
+   'C:\\AI_Environment\\Projects\\Financial calc for '
    'tally\\financial-distribution\\backend\\utils\\date_utils.py',
    'PYMODULE'),
   ('uuid', 'C:\\AI_Environment\\Python313\\Lib\\uuid.py', 'PYMODULE'),
